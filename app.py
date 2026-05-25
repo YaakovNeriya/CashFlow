@@ -2,9 +2,10 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import cashflow_db
 from datetime import date
 from services.analysis_service import generate_forecast_timeline, calculate_running_balance, calculate_monthly_summary
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key-change-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-fallback-key')
 
 # Initialize the db on startup
 with app.app_context():
@@ -105,4 +106,4 @@ def update_settings():
     return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5000)

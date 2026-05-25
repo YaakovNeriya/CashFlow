@@ -1,14 +1,25 @@
 from cashflow_sql import connect, create_tables
+import time
 
 def init_db():
-    with connect() as conn:
-        create_tables(conn)
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM settings LIMIT 1")
-            row = cursor.fetchone()
-            if not row:
-                cursor.execute("INSERT INTO settings (initial_balance) VALUES (0.0)")
-        conn.commit()
+    # Wait for MySQL to be ready
+    for i in range(5):
+        try:
+            with connect() as conn:
+                create_tables(conn)
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM settings LIMIT 1")
+                    row = cursor.fetchone()
+                    if not row:
+                        cursor.execute("INSERT INTO settings (initial_balance) VALUES (0.0)")
+                conn.commit()
+            print("Database connected successfully!")
+            return
+        except Exception as e:
+            print(f"Waiting for database... attempt {i+1}/5")
+            time.sleep(3)
+    print("ERROR: Could not connect to database after 5 attempts!")
+
 
 def get_settings():
     with connect() as conn:
