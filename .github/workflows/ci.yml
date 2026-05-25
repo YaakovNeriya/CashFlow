@@ -1,49 +1,43 @@
-name: CI Pipeline
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  test:
+  # Job שני: בניית Image ודחיפה ל-Docker Hub ול-ECR
+  build-and-push:
     runs-on: ubuntu-latest
-
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: test_password
-          MYSQL_DATABASE: cashflow
-          MYSQL_USER: cashflow_user
-          MYSQL_PASSWORD: test_password
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
-    env:
-      DB_HOST: 127.0.0.1
-      DB_USER: cashflow_user
-      DB_PASSWORD: test_password
-      DB_NAME: cashflow
-      SECRET_KEY: test-secret-key
+    needs: test  # רץ רק אם הטסטים עברו!
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # התחברות ל-Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          python-version: '3.12'
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      # התחברות ל-AWS
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Run tests
-        run: python -m pytest tests/ -v
+      # התחברות ל-ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # בניית ה-Image פעם אחת ודחיפה לשני המקומות
+      - name: Build Docker Image
+        run: docker build -t cashflow:latest .
+
+      - name: Tag and Push to Docker Hub
+        run: |
+          docker tag cashflow:latest ${{ secrets.DOCKER_USERNAME }}/cashflow:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/cashflow:latest
+
+      - name: Tag and Push to ECR
+        run: |
+          ECR_URI=${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}
+          docker tag cashflow:latest $ECR_URI:latest
+          docker push $ECR_URI:latest
