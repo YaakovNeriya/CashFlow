@@ -16,7 +16,7 @@ services:
       retries: 10
 
   app:
-    build: .
+    image: ${APP_IMAGE}
     environment:
       DB_HOST: mysql
       DB_USER: ${DB_USER}

@@ -9,3 +9,5 @@ terraform.tfvars
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+terraform/aws/
+terraform/awscliv2.zip
