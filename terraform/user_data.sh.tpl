@@ -14,14 +14,10 @@ usermod -aG docker ec2-user
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
-# 3. Create app directory and set up files
-mkdir -p /app/nginx
+# 3. Download the entire repository to get all config and static files
+cd /
+git clone https://github.com/YaakovNeriya/CashFlow.git app
 cd /app
-
-# Download your docker-compose and nginx files directly from your GitHub repo!
-# (הערה: שנה את "YaakovNeriya" ליוזר האמיתי שלך בגיטהאב אם זה שונה)
-curl -o docker-compose.yml https://raw.githubusercontent.com/YaakovNeriya/CashFlow/main/docker-compose.yml
-curl -o nginx/nginx.conf https://raw.githubusercontent.com/YaakovNeriya/CashFlow/main/nginx/nginx.conf
 
 # 4. Create the secure .env file dynamically from Terraform variables
 cat <<EOF > .env
