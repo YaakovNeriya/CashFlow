@@ -1,7 +1,12 @@
 terraform {
   required_version = ">= 1.5.0"
 
-  backend "s3" {}
+  backend "s3" {
+    bucket  = "cashflow-terraform-state"
+    key     = "terraform/state.tfstate"
+    region  = "us-east-1"
+    encrypt = true
+  }
 
   required_providers {
     aws = {
@@ -96,6 +101,15 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
 }
 
+resource "aws_ecr_repository" "app" {
+  name                 = var.app_name
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
+
 resource "aws_iam_role_policy_attachment" "ecr_readonly" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
@@ -120,7 +134,7 @@ resource "aws_instance" "app" {
     aws_region   = var.aws_region
     app_name     = var.app_name
     app_port     = var.app_port
-    docker_image = var.docker_image
+    docker_image = "${aws_ecr_repository.app.repository_url}:latest"
     db_host      = var.db_host
     db_user      = var.db_user
     db_password  = var.db_password
@@ -151,4 +165,9 @@ output "app_url" {
 
 output "ssh_command" {
   value = "ssh -i <your-key>.pem ec2-user@${aws_instance.app.public_ip}"
+}
+
+output "ecr_repository_url" {
+  value       = aws_ecr_repository.app.repository_url
+  description = "The URL of the ECR repository"
 }

@@ -30,6 +30,7 @@ variable "allowed_ssh_cidr" {
 variable "docker_image" {
   description = "Docker image URI from ECR"
   type        = string
+  default     = ""
 }
 
 variable "app_port" {
