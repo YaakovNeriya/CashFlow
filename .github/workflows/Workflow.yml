@@ -66,16 +66,21 @@ jobs:
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
 
       - name: Create tfvars file
-        run: |
-          cat <<'EOF' > terraform/terraform.tfvars
-          ${{ secrets.TFVARS_FILE }}
-          EOF
+        env:
+          TFVARS_CONTENT: ${{ secrets.TFVARS_FILE }}
+        run: printf '%s\n' "$TFVARS_CONTENT" > terraform/terraform.tfvars
 
       - name: Terraform Init
         working-directory: ./terraform
-        run: terraform init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=cashflow/terraform.tfstate" \
+            -backend-config="region=${{ secrets.AWS_REGION }}"
 
       - name: Terraform Apply (ECR Target)
         working-directory: ./terraform
