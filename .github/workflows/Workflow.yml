@@ -192,6 +192,7 @@ jobs:
           host: ${{ needs.terraform.outputs.ec2_ip }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 10m
           script: |
             echo "Waiting for setup to complete..."
             timeout 300 bash -c 'until [ -f /app/docker-compose.yml ]; do sleep 10; done'
