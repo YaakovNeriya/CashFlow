@@ -77,6 +77,18 @@ jobs:
         working-directory: ./terraform
         run: terraform init
 
+      - name: Import existing resources
+        working-directory: ./terraform
+        continue-on-error: true
+        run: |
+          terraform import aws_ecr_repository.app cashflow-app 2>/dev/null || true
+          SG_ID=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=cashflow-app-sg" --query "SecurityGroups[0].GroupId" --output text 2>/dev/null || echo "None")
+          if [ "$SG_ID" != "None" ] && [ "$SG_ID" != "" ]; then
+            terraform import aws_security_group.app_sg "$SG_ID" 2>/dev/null || true
+          fi
+          terraform import aws_iam_role.ec2_role cashflow-app-ec2-role 2>/dev/null || true
+          terraform import aws_iam_instance_profile.ec2_profile cashflow-app-instance-profile 2>/dev/null || true
+
       - name: Terraform Apply (ECR Target)
         working-directory: ./terraform
         run: terraform apply -target=aws_ecr_repository.app -auto-approve
