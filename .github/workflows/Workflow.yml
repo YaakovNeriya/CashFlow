@@ -170,21 +170,11 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "Waiting for Docker to be ready..."
-            timeout 300 bash -c 'until command -v docker &>/dev/null; do sleep 10; done'
-            echo "Docker is ready"
+            echo "Waiting for setup to complete..."
+            timeout 300 bash -c 'until [ -f /app/docker-compose.yml ]; do sleep 10; done'
+            echo "Setup complete"
+            cd /app
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
               | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
-            docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
-            docker rm -f cashflow-app || true
-            docker run -d \
-              --name cashflow-app \
-              --restart unless-stopped \
-              -p 80:5000 \
-              -e FLASK_ENV=production \
-              -e SECRET_KEY='${{ secrets.SECRET_KEY }}' \
-              -e DB_HOST='127.0.0.1' \
-              -e DB_USER='${{ secrets.DB_USER }}' \
-              -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
-              -e DB_NAME='${{ secrets.DB_NAME }}' \
-              ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
+            docker-compose pull app
+            docker-compose up -d
