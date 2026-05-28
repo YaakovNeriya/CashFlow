@@ -3,7 +3,7 @@ terraform {
 
   backend "s3" {
     bucket  = "cashflow-terraform-state"
-    key     = "terraform/state.tfstate"
+    key     = "cashflow/terraform.tfstate"
     region  = "eu-north-1"
     encrypt = true
   }
