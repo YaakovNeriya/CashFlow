@@ -69,7 +69,9 @@ jobs:
 
       - name: Create tfvars file
         run: |
-          echo "${{ secrets.TFVARS_FILE }}" > terraform/terraform.tfvars
+          cat <<'EOF' > terraform/terraform.tfvars
+          ${{ secrets.TFVARS_FILE }}
+          EOF
 
       - name: Terraform Init
         working-directory: ./terraform
