@@ -41,6 +41,7 @@ variable "app_port" {
 variable "db_host" {
   description = "Database host or endpoint"
   type        = string
+  default     = "127.0.0.1"
 }
 
 variable "db_user" {
