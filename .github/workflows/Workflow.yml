@@ -136,7 +136,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /app
-            git pull
+            sudo git config --global --add safe.directory /app
+            sudo git pull
             # Login to ECR
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             # Pull the new image and recreate containers
