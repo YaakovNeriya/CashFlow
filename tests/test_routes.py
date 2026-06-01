@@ -11,76 +11,59 @@ def client():
         yield client
 
 
-# Mock padrão para o cashflow_db — retorna dados vazios por defeito
-DEFAULT_MOCKS = {
-    'cashflow_db.get_settings': {'initial_balance': 1000.0},
-    'cashflow_db.get_all_transactions': [],
-    'cashflow_db.get_all_recurring': [],
-}
-
-
-def apply_mocks(mocker, overrides={}):
-    mocks = {**DEFAULT_MOCKS, **overrides}
-    for target, return_value in mocks.items():
-        mocker.patch(target, return_value=return_value)
-
-
 # ─────────────────────────────────────────────
-# GET routes — devem retornar 200
+# GET routes — should return 200
 # ─────────────────────────────────────────────
 
 @patch('cashflow_db.get_all_recurring', return_value=[])
 @patch('cashflow_db.get_all_transactions', return_value=[])
-@patch('cashflow_db.get_settings', return_value={'initial_balance': 1000.0})
-def test_dashboard_returns_200(mock_settings, mock_tx, mock_rec, client):
+@patch('cashflow_db.get_settings', return_value={'initial_balance': 1000.0, 'warning_threshold': 500.0})
+def test_forecast_returns_200(mock_settings, mock_tx, mock_rec, client):
     response = client.get('/')
     assert response.status_code == 200
 
 
+@patch('cashflow_db.get_all_recurring', return_value=[])
 @patch('cashflow_db.get_all_transactions', return_value=[])
-def test_transactions_page_returns_200(mock_tx, client):
-    response = client.get('/transactions')
+def test_operations_page_returns_200(mock_tx, mock_rec, client):
+    response = client.get('/operations')
     assert response.status_code == 200
 
 
-@patch('cashflow_db.get_all_recurring', return_value=[])
-def test_recurring_page_returns_200(mock_rec, client):
-    response = client.get('/recurring')
-    assert response.status_code == 200
-
-
-@patch('cashflow_db.get_all_recurring', return_value=[])
-@patch('cashflow_db.get_all_transactions', return_value=[])
-def test_monthly_page_returns_200(mock_tx, mock_rec, client):
-    response = client.get('/monthly')
+@patch('cashflow_db.get_settings', return_value={'initial_balance': 1000.0, 'warning_threshold': 500.0})
+def test_settings_page_returns_200(mock_settings, client):
+    response = client.get('/settings')
     assert response.status_code == 200
 
 
 # ─────────────────────────────────────────────
-# POST /transactions
+# POST /operations — transactions
 # ─────────────────────────────────────────────
 
+@patch('cashflow_db.get_all_recurring', return_value=[])
 @patch('cashflow_db.get_all_transactions', return_value=[])
 @patch('cashflow_db.add_transaction', return_value=None)
-def test_add_transaction_valid(mock_add, mock_get, client):
-    response = client.post('/transactions', data={
+def test_add_transaction_valid(mock_add, mock_get_tx, mock_get_rec, client):
+    response = client.post('/operations', data={
+        'form_type': 'transaction',
         'date': '2025-01-15',
-        'description': 'Salário',
+        'description': 'Salary',
         'amount': '3000'
     })
     assert response.status_code == 302
-    mock_add.assert_called_once_with('2025-01-15', 'Salário', 3000.0)
+    mock_add.assert_called_once_with('2025-01-15', 'Salary', 3000.0)
 
 
+@patch('cashflow_db.get_all_recurring', return_value=[])
 @patch('cashflow_db.get_all_transactions', return_value=[])
 @patch('cashflow_db.add_transaction', return_value=None)
-def test_add_transaction_invalid_amount(mock_add, mock_get, client):
-    response = client.post('/transactions', data={
+def test_add_transaction_invalid_amount(mock_add, mock_get_tx, mock_get_rec, client):
+    response = client.post('/operations', data={
+        'form_type': 'transaction',
         'date': '2025-01-15',
-        'description': 'Teste',
-        'amount': 'nao_e_numero'
+        'description': 'Test',
+        'amount': 'not_a_number'
     })
-    # Deve redirecionar mas sem chamar add_transaction
     assert response.status_code == 302
     mock_add.assert_not_called()
 
@@ -97,40 +80,46 @@ def test_delete_transaction(mock_delete, client):
 
 
 # ─────────────────────────────────────────────
-# POST /recurring
+# POST /operations — recurring
 # ─────────────────────────────────────────────
 
 @patch('cashflow_db.get_all_recurring', return_value=[])
+@patch('cashflow_db.get_all_transactions', return_value=[])
 @patch('cashflow_db.add_recurring', return_value=None)
-def test_add_recurring_valid(mock_add, mock_get, client):
-    response = client.post('/recurring', data={
-        'description': 'Aluguel',
+def test_add_recurring_valid(mock_add, mock_get_tx, mock_get_rec, client):
+    response = client.post('/operations', data={
+        'form_type': 'recurring',
+        'description': 'Rent',
         'amount': '-1500',
         'day_of_month': '5'
     })
     assert response.status_code == 302
-    mock_add.assert_called_once_with(5, 'Aluguel', -1500.0)
+    mock_add.assert_called_once_with(5, 'Rent', -1500.0)
 
 
 @patch('cashflow_db.get_all_recurring', return_value=[])
+@patch('cashflow_db.get_all_transactions', return_value=[])
 @patch('cashflow_db.add_recurring', return_value=None)
-def test_add_recurring_invalid_day(mock_add, mock_get, client):
-    response = client.post('/recurring', data={
-        'description': 'Teste',
+def test_add_recurring_invalid_day(mock_add, mock_get_tx, mock_get_rec, client):
+    response = client.post('/operations', data={
+        'form_type': 'recurring',
+        'description': 'Test',
         'amount': '-100',
-        'day_of_month': '32'  # inválido
+        'day_of_month': '32'
     })
     assert response.status_code == 302
     mock_add.assert_not_called()
 
 
 @patch('cashflow_db.get_all_recurring', return_value=[])
+@patch('cashflow_db.get_all_transactions', return_value=[])
 @patch('cashflow_db.add_recurring', return_value=None)
-def test_add_recurring_day_zero(mock_add, mock_get, client):
-    response = client.post('/recurring', data={
-        'description': 'Teste',
+def test_add_recurring_day_zero(mock_add, mock_get_tx, mock_get_rec, client):
+    response = client.post('/operations', data={
+        'form_type': 'recurring',
+        'description': 'Test',
         'amount': '-100',
-        'day_of_month': '0'  # inválido
+        'day_of_month': '0'
     })
     assert response.status_code == 302
     mock_add.assert_not_called()
@@ -151,15 +140,20 @@ def test_delete_recurring(mock_delete, client):
 # POST /settings
 # ─────────────────────────────────────────────
 
+@patch('cashflow_db.get_settings', return_value={'initial_balance': 1000.0, 'warning_threshold': 500.0})
 @patch('cashflow_db.update_settings', return_value=None)
-def test_update_settings_valid(mock_update, client):
-    response = client.post('/settings', data={'initial_balance': '5000'})
+def test_update_settings_valid(mock_update, mock_get, client):
+    response = client.post('/settings', data={
+        'initial_balance': '5000',
+        'warning_threshold': '2000'
+    })
     assert response.status_code == 302
-    mock_update.assert_called_once_with(5000.0)
+    mock_update.assert_called_once_with(5000.0, 2000.0)
 
 
+@patch('cashflow_db.get_settings', return_value={'initial_balance': 1000.0, 'warning_threshold': 500.0})
 @patch('cashflow_db.update_settings', return_value=None)
-def test_update_settings_invalid(mock_update, client):
+def test_update_settings_invalid(mock_update, mock_get, client):
     response = client.post('/settings', data={'initial_balance': 'abc'})
     assert response.status_code == 302
     mock_update.assert_not_called()
