@@ -158,7 +158,7 @@ jobs:
               echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
             fi
             # Login to ECR
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             # Pull the new image and recreate containers
-            docker-compose pull app
-            docker-compose up -d --remove-orphans
+            sudo /usr/local/bin/docker-compose pull app
+            sudo /usr/local/bin/docker-compose up -d --remove-orphans
