@@ -121,25 +121,41 @@ jobs:
         working-directory: ./terraform
         run: terraform apply -auto-approve
 
-      - name: Get EC2 IP
-        id: get-ip
+      - name: Get EC2 Info
+        id: ec2-info
         working-directory: ./terraform
         run: |
           IP=$(terraform output -raw public_ip)
+          ID=$(terraform output -raw instance_id)
           echo "ip=$IP" >> $GITHUB_OUTPUT
+          echo "id=$ID" >> $GITHUB_OUTPUT
+
+      - name: Reboot EC2 (Clear OOM state)
+        run: |
+          aws ec2 reboot-instances --instance-ids ${{ steps.ec2-info.outputs.id }}
+          echo "Waiting 45 seconds for instance to come back online..."
+          sleep 45
 
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.get-ip.outputs.ip }}
+          host: ${{ steps.ec2-info.outputs.ip }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /app
             sudo git config --global --add safe.directory /app
             sudo git pull
+            # Create a 2GB swap file to prevent Out-Of-Memory (OOM) crashes
+            if [ ! -f /swapfile ]; then
+              sudo fallocate -l 2G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            fi
             # Login to ECR
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             # Pull the new image and recreate containers
             docker-compose pull app
-            docker-compose up -d
+            docker-compose up -d --remove-orphans
