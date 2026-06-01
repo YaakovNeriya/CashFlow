@@ -1,0 +1,48 @@
+name: Debug Server
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Create tfvars file
+        run: |
+          cat <<'EOF' > terraform/terraform.tfvars
+          ${{ secrets.TFVARS_FILE }}
+          EOF
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Get EC2 IP
+        id: get-ip
+        working-directory: ./terraform
+        run: |
+          IP=$(terraform output -raw public_ip)
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Debug via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.get-ip.outputs.ip }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker ps -a
+            docker logs cashflow-grafana-1
+            docker logs cashflow-prometheus-1
