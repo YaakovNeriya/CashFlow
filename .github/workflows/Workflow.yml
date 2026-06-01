@@ -120,3 +120,25 @@ jobs:
       - name: Terraform Apply (All Resources)
         working-directory: ./terraform
         run: terraform apply -auto-approve
+
+      - name: Get EC2 IP
+        id: get-ip
+        working-directory: ./terraform
+        run: |
+          IP=$(terraform output -raw public_ip)
+          echo "ip=$IP" >> $GITHUB_OUTPUT
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.get-ip.outputs.ip }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /app
+            git pull
+            # Login to ECR
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+            # Pull the new image and recreate containers
+            docker-compose pull app
+            docker-compose up -d
