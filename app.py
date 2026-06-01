@@ -5,8 +5,11 @@ from services.analysis_service import generate_forecast_timeline, calculate_runn
 import os
 import json
 
+from prometheus_flask_exporter import PrometheusMetrics
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-fallback-key')
+metrics = PrometheusMetrics(app)
 
 # Initialize the db on startup
 with app.app_context():
