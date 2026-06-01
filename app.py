@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import cashflow_db
-from datetime import date
+from datetime import date, datetime
 from services.analysis_service import generate_forecast_timeline, calculate_running_balance, calculate_monthly_summary, calculate_kpis, get_chart_data
 import os
 import json
@@ -50,6 +50,9 @@ def operations():
             description = request.form.get('description')
             amount_str = request.form.get('amount')
             try:
+                if not date_str:
+                    raise ValueError("יש להזין תאריך")
+                datetime.strptime(date_str, '%Y-%m-%d') # Validate format
                 amount_val = float(amount_str)
                 cashflow_db.add_transaction(date_str, description, amount_val)
                 flash('הפעולה נוספה בהצלחה!', 'success')
