@@ -144,10 +144,14 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Dump cloud-init logs to see why it failed
-            cat /var/log/cloud-init-output.log || echo "No cloud-init log found"
-            # Wait for EC2 initialization (user_data.sh) to finish
-            cloud-init status --wait || true
+            set -e
+            echo "Waiting for cloud-init to finish (this may take 2-3 minutes)..."
+            while [ ! -f /var/lib/cloud/instance/boot-finished ]; do sleep 5; done
+            echo "Cloud-init finished!"
+            
+            # Dump cloud-init logs if there were errors
+            cat /var/log/cloud-init-output.log | tail -n 20 || true
+            
             cd /app
             sudo git config --global --add safe.directory /app
             sudo git pull
