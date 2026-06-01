@@ -131,12 +131,6 @@ jobs:
           echo "ip=$IP" >> $GITHUB_OUTPUT
           echo "id=$ID" >> $GITHUB_OUTPUT
 
-      - name: Reboot EC2 (Clear OOM state)
-        run: |
-          aws ec2 reboot-instances --instance-ids ${{ steps.ec2-info.outputs.id }}
-          echo "Waiting 45 seconds for instance to come back online..."
-          sleep 45
-
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

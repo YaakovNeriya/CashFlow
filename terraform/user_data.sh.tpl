@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
+# Trigger recreation (v2)
 
 # 1. Update and install Docker & Git
 dnf update -y
