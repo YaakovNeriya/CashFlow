@@ -51,14 +51,67 @@ def generate_forecast_timeline(transactions, recurring_transactions, start_date=
             
     return sorted(all_events, key=lambda x: x['date'])
 
-def calculate_running_balance(start_balance, timeline_events):
+def calculate_running_balance(start_balance, timeline_events, warning_threshold=0.0):
+    """Calculate running balance and add month markers, warnings, and monthly summaries."""
     current_balance = start_balance
     result = []
-    for t in timeline_events:
+    current_month = None
+    month_credit = 0.0
+    month_debit = 0.0
+    month_event_count = 0
+    
+    for i, t in enumerate(timeline_events):
+        event_month = t['date'].strftime('%Y-%m')
+        
+        # Detect month change — insert monthly summary for previous month
+        if current_month is not None and event_month != current_month:
+            month_net = month_credit + month_debit
+            result.append({
+                'type': 'month_summary',
+                'month': current_month,
+                'credit': month_credit,
+                'debit': month_debit,
+                'net': month_net,
+                'running_balance': current_balance,
+                'balance_change': month_net,
+            })
+            month_credit = 0.0
+            month_debit = 0.0
+            month_event_count = 0
+        
+        # Track if this is the first event in a new month
+        is_month_start = (event_month != current_month)
+        current_month = event_month
+        
         current_balance += t['amount']
+        month_event_count += 1
+        
+        if t['amount'] > 0:
+            month_credit += t['amount']
+        else:
+            month_debit += t['amount']
+        
         t_copy = t.copy()
+        t_copy['type'] = 'event'
         t_copy['running_balance'] = current_balance
+        t_copy['is_month_start'] = is_month_start
+        t_copy['month_event_count'] = month_event_count
+        t_copy['below_threshold'] = (current_balance < warning_threshold) if warning_threshold > 0 else False
         result.append(t_copy)
+    
+    # Final month summary
+    if current_month is not None:
+        month_net = month_credit + month_debit
+        result.append({
+            'type': 'month_summary',
+            'month': current_month,
+            'credit': month_credit,
+            'debit': month_debit,
+            'net': month_net,
+            'running_balance': current_balance,
+            'balance_change': month_net,
+        })
+    
     return result
 
 def calculate_monthly_summary(timeline_events):
@@ -82,3 +135,62 @@ def calculate_monthly_summary(timeline_events):
             'net_difference': net
         })
     return result
+
+def calculate_kpis(running_balance_data, start_balance, warning_threshold=0.0):
+    """Calculate KPI metrics for the forecast dashboard."""
+    events = [item for item in running_balance_data if item['type'] == 'event']
+    summaries = [item for item in running_balance_data if item['type'] == 'month_summary']
+    
+    if not events:
+        return {
+            'current_balance': start_balance,
+            'min_balance': start_balance,
+            'min_balance_date': None,
+            'avg_monthly_credit': 0.0,
+            'avg_monthly_debit': 0.0,
+            'avg_monthly_net': 0.0,
+            'threshold_violations': 0,
+            'warning_threshold': warning_threshold,
+        }
+    
+    # Find minimum projected balance
+    min_balance = min(e['running_balance'] for e in events)
+    min_balance_event = next(e for e in events if e['running_balance'] == min_balance)
+    
+    # Monthly averages
+    num_months = max(len(summaries), 1)
+    total_credit = sum(s['credit'] for s in summaries)
+    total_debit = sum(s['debit'] for s in summaries)
+    
+    # Count threshold violations
+    violations = sum(1 for e in events if e.get('below_threshold', False))
+    
+    return {
+        'current_balance': start_balance,
+        'min_balance': min_balance,
+        'min_balance_date': min_balance_event['date'],
+        'avg_monthly_credit': total_credit / num_months,
+        'avg_monthly_debit': total_debit / num_months,
+        'avg_monthly_net': (total_credit + total_debit) / num_months,
+        'threshold_violations': violations,
+        'warning_threshold': warning_threshold,
+    }
+
+def get_chart_data(running_balance_data, warning_threshold=0.0):
+    """Prepare data for the Chart.js line chart."""
+    events = [item for item in running_balance_data if item['type'] == 'event']
+    
+    labels = []
+    balances = []
+    thresholds = []
+    
+    for e in events:
+        labels.append(e['date'].strftime('%d/%m'))
+        balances.append(round(e['running_balance'], 2))
+        thresholds.append(round(warning_threshold, 2))
+    
+    return {
+        'labels': labels,
+        'balances': balances,
+        'thresholds': thresholds,
+    }

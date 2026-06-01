@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block page_title %}הגדרות{% endblock %}
+{% block title %}⚙️ הגדרות{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <div class="card settings-card">
+        <h3 class="card-title">הגדרות המערכת</h3>
+        <p class="card-subtitle">הגדירו את נקודת ההתחלה של התחזית ואת סף האזהרה האישי שלכם.</p>
+        
+        <form action="{{ url_for('settings') }}" method="POST" class="settings-form">
+            <div class="settings-group">
+                <div class="setting-item">
+                    <div class="setting-icon">🏦</div>
+                    <div class="setting-content">
+                        <label for="initial_balance" class="setting-label">יתרת בנק נוכחית</label>
+                        <p class="setting-description">הסכום הנוכחי שבחשבון הבנק שלכם. זוהי נקודת ההתחלה של התחזית.</p>
+                        <div class="setting-input-wrapper">
+                            <span class="currency-symbol">₪</span>
+                            <input type="number" step="0.01" class="form-control setting-input" id="initial_balance" name="initial_balance" value="{{ settings.initial_balance }}" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <div class="setting-icon">⚠️</div>
+                    <div class="setting-content">
+                        <label for="warning_threshold" class="setting-label">סף אזהרת יתרה</label>
+                        <p class="setting-description">כאשר היתרה החזויה תרד מתחת לסכום הזה, תוצג אזהרה אדומה במסך התחזית.</p>
+                        <div class="setting-input-wrapper">
+                            <span class="currency-symbol">₪</span>
+                            <input type="number" step="0.01" class="form-control setting-input" id="warning_threshold" name="warning_threshold" value="{{ settings.warning_threshold }}" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-save">💾 שמירת הגדרות</button>
+        </form>
+    </div>
+
+    <div class="card info-card">
+        <h3 class="card-title">ℹ️ איך זה עובד?</h3>
+        <div class="info-content">
+            <div class="info-step">
+                <span class="step-number">1</span>
+                <div>
+                    <strong>הזנת פעולות</strong>
+                    <p>הזינו פעולות חד-פעמיות וקבועות חודשיות במסך הפעולות.</p>
+                </div>
+            </div>
+            <div class="info-step">
+                <span class="step-number">2</span>
+                <div>
+                    <strong>הגדרות (אתם כאן!)</strong>
+                    <p>הגדירו את היתרה הנוכחית בבנק ואת סף האזהרה האישי שלכם.</p>
+                </div>
+            </div>
+            <div class="info-step">
+                <span class="step-number">3</span>
+                <div>
+                    <strong>תחזית שנתית</strong>
+                    <p>המערכת תחשב אוטומטית תחזית ל-12 חודשים קדימה עם גרפים, סיכומים ואזהרות.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

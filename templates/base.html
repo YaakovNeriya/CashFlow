@@ -1,21 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CashFlow Forecast</title>
+    <title>CashFlow - {% block page_title %}תחזית פיננסית{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    {% block head %}{% endblock %}
 </head>
 <body>
     <nav class="sidebar">
         <div class="sidebar-brand">
-            <span>🪙 CashFlow</span>
+            <span class="brand-icon">💰</span>
+            <span class="brand-text">CashFlow</span>
         </div>
         <div class="sidebar-nav">
-            <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a>
-            <a href="{{ url_for('view_transactions') }}" class="nav-item {% if request.endpoint == 'view_transactions' %}active{% endif %}">Single Transactions</a>
-            <a href="{{ url_for('view_recurring') }}" class="nav-item {% if request.endpoint == 'view_recurring' %}active{% endif %}">Fixed Monthly Actions</a>
-            <a href="{{ url_for('view_monthly') }}" class="nav-item {% if request.endpoint == 'view_monthly' %}active{% endif %}">Monthly Summary</a>
+            <a href="{{ url_for('forecast') }}" class="nav-item {% if request.endpoint == 'forecast' %}active{% endif %}" id="nav-forecast">
+                <span class="nav-icon">📊</span>
+                <span>תחזית שנתית</span>
+            </a>
+            <a href="{{ url_for('operations') }}" class="nav-item {% if request.endpoint == 'operations' %}active{% endif %}" id="nav-operations">
+                <span class="nav-icon">📝</span>
+                <span>הזנת פעולות</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}" id="nav-settings">
+                <span class="nav-icon">⚙️</span>
+                <span>הגדרות</span>
+            </a>
         </div>
     </nav>
     <main class="main-content">
@@ -35,5 +49,6 @@
 
         {% block content %}{% endblock %}
     </main>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

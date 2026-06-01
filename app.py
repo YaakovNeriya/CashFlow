@@ -1,8 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import cashflow_db
 from datetime import date
-from services.analysis_service import generate_forecast_timeline, calculate_running_balance, calculate_monthly_summary
+from services.analysis_service import generate_forecast_timeline, calculate_running_balance, calculate_monthly_summary, calculate_kpis, get_chart_data
 import os
+import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-fallback-key')
@@ -11,99 +12,94 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-fallback-key')
 with app.app_context():
     cashflow_db.init_db()
 
+# ── Screen 2: Forecast Dashboard (Main Screen) ──────────────────────
 @app.route('/')
-def dashboard():
+def forecast():
     settings = cashflow_db.get_settings()
     start_balance = settings['initial_balance']
+    warning_threshold = settings['warning_threshold']
     
     transactions = cashflow_db.get_all_transactions()
     recurring_transactions = cashflow_db.get_all_recurring()
     
     timeline = generate_forecast_timeline(transactions, recurring_transactions, start_date=date.today(), years_ahead=1)
+    running_balance_data = calculate_running_balance(start_balance, timeline, warning_threshold)
+    kpis = calculate_kpis(running_balance_data, start_balance, warning_threshold)
+    chart_data = get_chart_data(running_balance_data, warning_threshold)
     
-    running_balance_data = calculate_running_balance(start_balance, timeline)
-    monthly_data = calculate_monthly_summary(timeline)
-    
-    return render_template('dashboard.html', 
+    return render_template('forecast.html', 
                            data=running_balance_data,
-                           monthly_data=monthly_data,
-                           current_balance=start_balance,
-                           start_balance=start_balance)
+                           kpis=kpis,
+                           chart_data=json.dumps(chart_data),
+                           start_balance=start_balance,
+                           warning_threshold=warning_threshold)
 
-@app.route('/transactions', methods=['GET', 'POST'])
-def view_transactions():
+# ── Screen 1: Operations (Transactions + Recurring) ─────────────────
+@app.route('/operations', methods=['GET', 'POST'])
+def operations():
+    action = request.args.get('action', '')
+    
     if request.method == 'POST':
-        date_str = request.form.get('date')
-        description = request.form.get('description')
-        amount_str = request.form.get('amount')
+        form_type = request.form.get('form_type')
         
-        try:
-            amount_val = float(amount_str)
-            cashflow_db.add_transaction(date_str, description, amount_val)
-            flash('Transaction added successfully!', 'success')
-        except Exception as e:
-            flash(f'Error adding transaction: {e}', 'error')
-            
-        return redirect(url_for('view_transactions'))
+        if form_type == 'transaction':
+            date_str = request.form.get('date')
+            description = request.form.get('description')
+            amount_str = request.form.get('amount')
+            try:
+                amount_val = float(amount_str)
+                cashflow_db.add_transaction(date_str, description, amount_val)
+                flash('הפעולה נוספה בהצלחה!', 'success')
+            except Exception as e:
+                flash(f'שגיאה בהוספת פעולה: {e}', 'error')
+                
+        elif form_type == 'recurring':
+            description = request.form.get('description')
+            amount_str = request.form.get('amount')
+            day_of_month_str = request.form.get('day_of_month')
+            try:
+                amount_val = float(amount_str)
+                day_val = int(day_of_month_str)
+                if not (1 <= day_val <= 31):
+                    raise ValueError("יום חייב להיות בין 1 ל-31")
+                cashflow_db.add_recurring(day_val, description, amount_val)
+                flash('פעולה קבועה חודשית נוספה בהצלחה!', 'success')
+            except Exception as e:
+                flash(f'שגיאה בהוספת פעולה קבועה: {e}', 'error')
+                
+        return redirect(url_for('operations'))
         
     transactions = cashflow_db.get_all_transactions()
-    return render_template('transactions.html', transactions=transactions)
+    recurring = cashflow_db.get_all_recurring()
+    return render_template('operations.html', transactions=transactions, recurring=recurring)
 
 @app.route('/transactions/delete/<int:id>', methods=['POST'])
 def delete_transaction(id):
     cashflow_db.delete_transaction(id)
-    flash('Transaction deleted!', 'success')
-    return redirect(url_for('view_transactions'))
-
-@app.route('/recurring', methods=['GET', 'POST'])
-def view_recurring():
-    if request.method == 'POST':
-        description = request.form.get('description')
-        amount_str = request.form.get('amount')
-        day_of_month_str = request.form.get('day_of_month')
-        
-        try:
-            amount_val = float(amount_str)
-            day_val = int(day_of_month_str)
-            if not (1 <= day_val <= 31):
-                raise ValueError("Day must be between 1 and 31")
-                
-            cashflow_db.add_recurring(day_val, description, amount_val)
-            flash('Fixed Monthly Action added successfully!', 'success')
-        except Exception as e:
-            flash(f'Error adding fixed action: {e}', 'error')
-            
-        return redirect(url_for('view_recurring'))
-        
-    recurring = cashflow_db.get_all_recurring()
-    return render_template('recurring.html', recurring=recurring)
+    flash('הפעולה נמחקה!', 'success')
+    return redirect(url_for('operations'))
 
 @app.route('/recurring/delete/<int:id>', methods=['POST'])
 def delete_recurring(id):
     cashflow_db.delete_recurring(id)
-    flash('Fixed Action deleted!', 'success')
-    return redirect(url_for('view_recurring'))
+    flash('הפעולה הקבועה נמחקה!', 'success')
+    return redirect(url_for('operations'))
 
-@app.route('/monthly')
-def view_monthly():
-    transactions = cashflow_db.get_all_transactions()
-    recurring_transactions = cashflow_db.get_all_recurring()
-    timeline = generate_forecast_timeline(transactions, recurring_transactions, start_date=date.today(), years_ahead=1)
-    monthly_data = calculate_monthly_summary(timeline)
-    return render_template('monthly.html', monthly_data=monthly_data)
-
-@app.route('/settings', methods=['POST'])
-def update_settings():
-    new_balance_str = request.form.get('initial_balance')
-    if new_balance_str is not None:
+# ── Screen 3: Settings ──────────────────────────────────────────────
+@app.route('/settings', methods=['GET', 'POST'])
+def settings():
+    if request.method == 'POST':
         try:
-            new_balance = float(new_balance_str)
-            cashflow_db.update_settings(new_balance)
-            flash('Current bank balance updated!', 'success')
+            new_balance = float(request.form.get('initial_balance', 0))
+            new_threshold = float(request.form.get('warning_threshold', 0))
+            cashflow_db.update_settings(new_balance, new_threshold)
+            flash('ההגדרות עודכנו בהצלחה!', 'success')
         except ValueError:
-            flash('Invalid balance amount.', 'error')
-            
-    return redirect(url_for('dashboard'))
+            flash('ערך לא תקין.', 'error')
+        return redirect(url_for('settings'))
+    
+    current_settings = cashflow_db.get_settings()
+    return render_template('settings.html', settings=current_settings)
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'

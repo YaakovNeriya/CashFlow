@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block page_title %}תחזית שנתית{% endblock %}
+{% block title %}📊 תחזית שנתית{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="kpi-grid">
+    <div class="kpi-card kpi-balance">
+        <span class="kpi-label">יתרת העו״ש בבנק</span>
+        <span class="kpi-value {% if kpis.current_balance >= 0 %}text-credit{% else %}text-debit{% endif %}">
+            ₪{{ "{:,.0f}".format(kpis.current_balance) }}
+        </span>
+    </div>
+    <div class="kpi-card kpi-warning">
+        <span class="kpi-label">אזהרת יתרה נמוכה מ-</span>
+        <span class="kpi-value">₪{{ "{:,.0f}".format(kpis.warning_threshold) }}</span>
+        <span class="kpi-sub {% if kpis.threshold_violations > 0 %}text-debit{% else %}text-credit{% endif %}">
+            {% if kpis.threshold_violations > 0 %}
+                ⚠️ {{ kpis.threshold_violations }} פעולות שעברו סף
+            {% else %}
+                ✅ אין חריגות
+            {% endif %}
+        </span>
+    </div>
+    <div class="kpi-card kpi-average">
+        <span class="kpi-label">ממוצע חודשי</span>
+        <div class="kpi-breakdown">
+            <div class="kpi-row">
+                <span class="kpi-row-label">זכות</span>
+                <span class="text-credit">₪{{ "{:,.0f}".format(kpis.avg_monthly_credit) }}</span>
+            </div>
+            <div class="kpi-row">
+                <span class="kpi-row-label">חובה</span>
+                <span class="text-debit">₪{{ "{:,.0f}".format(kpis.avg_monthly_debit) }}</span>
+            </div>
+            <div class="kpi-row kpi-row-net">
+                <span class="kpi-row-label">הפרש</span>
+                <span class="{% if kpis.avg_monthly_net >= 0 %}text-credit{% else %}text-debit{% endif %}">
+                    ₪{{ "{:,.0f}".format(kpis.avg_monthly_net) }}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="kpi-card kpi-min">
+        <span class="kpi-label">היתרה הנמוכה ביותר בתחזית</span>
+        <span class="kpi-value {% if kpis.min_balance >= 0 %}text-credit{% else %}text-debit{% endif %}">
+            ₪{{ "{:,.0f}".format(kpis.min_balance) }}
+        </span>
+        {% if kpis.min_balance_date %}
+        <span class="kpi-sub">בתאריך {{ kpis.min_balance_date.strftime('%d/%m/%Y') }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Chart -->
+<div class="card chart-card">
+    <h3 class="card-title">📈 תחזית יתרה - 12 חודשים</h3>
+    <div class="chart-container">
+        <canvas id="forecastChart"></canvas>
+    </div>
+</div>
+
+<!-- Detailed Forecast Table -->
+<div class="card table-card">
+    <h3 class="card-title">📋 פירוט תחזית מלאה</h3>
+    <div class="table-container">
+        <table id="forecast-table">
+            <thead>
+                <tr>
+                    <th>תאריך</th>
+                    <th>תיאור</th>
+                    <th>פעולות</th>
+                    <th>סה״כ</th>
+                    <th>תחזית יתרה</th>
+                    <th>הפרש חודשי</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data %}
+                    {% if item.type == 'event' %}
+                    <tr class="{% if item.is_month_start %}month-start-row{% endif %} {% if item.below_threshold %}warning-row{% endif %}">
+                        <td class="{% if item.is_month_start %}month-start-date{% endif %}">
+                            {{ item.date.strftime('%d/%m') }}
+                        </td>
+                        <td>
+                            {% if item.is_recurring %}<span class="badge badge-recurring">קבוע</span>{% endif %}
+                            {{ item.description }}
+                        </td>
+                        <td>{{ item.month_event_count }}</td>
+                        <td class="{% if item.amount > 0 %}text-credit{% elif item.amount < 0 %}text-debit{% endif %} amount-cell">
+                            ₪{{ "{:,.0f}".format(item.amount) }}
+                        </td>
+                        <td class="balance-cell {% if item.below_threshold %}text-debit warning-balance{% else %}{% if item.running_balance >= 0 %}text-credit{% else %}text-debit{% endif %}{% endif %}">
+                            {% if item.below_threshold %}<span class="warning-icon">⚠️</span>{% endif %}
+                            ₪{{ "{:,.0f}".format(item.running_balance) }}
+                        </td>
+                        <td></td>
+                    </tr>
+                    {% elif item.type == 'month_summary' %}
+                    <tr class="month-summary-row">
+                        <td colspan="2" class="month-summary-label">
+                            📅 סיכום {{ item.month }}
+                        </td>
+                        <td></td>
+                        <td></td>
+                        <td class="{% if item.running_balance >= 0 %}text-credit{% else %}text-debit{% endif %}">
+                            <strong>₪{{ "{:,.0f}".format(item.running_balance) }}</strong>
+                        </td>
+                        <td class="{% if item.net >= 0 %}text-credit{% else %}text-debit{% endif %}">
+                            <strong>₪{{ "{:,.0f}".format(item.net) }}</strong>
+                        </td>
+                    </tr>
+                    {% endif %}
+                {% else %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-state-content">
+                            <span class="empty-icon">📭</span>
+                            <p>אין פעולות עדיין. הוסיפו פעולות במסך <a href="{{ url_for('operations') }}">הזנת פעולות</a>.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chartData = {{ chart_data | safe }};
+    
+    if (chartData.labels.length > 0) {
+        const ctx = document.getElementById('forecastChart').getContext('2d');
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'יתרה חזויה',
+                        data: chartData.balances,
+                        borderColor: '#3b82f6',
+                        backgroundColor: gradient,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#3b82f6',
+                        borderWidth: 2.5,
+                    },
+                    {
+                        label: 'סף אזהרה',
+                        data: chartData.thresholds,
+                        borderColor: '#ef4444',
+                        borderDash: [8, 4],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        rtl: true,
+                        labels: {
+                            color: '#94a3b8',
+                            font: { family: 'Inter', size: 13 },
+                            usePointStyle: true,
+                            padding: 20,
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        borderColor: 'rgba(59, 130, 246, 0.3)',
+                        borderWidth: 1,
+                        titleFont: { family: 'Inter', size: 14 },
+                        bodyFont: { family: 'Inter', size: 13 },
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ₪' + context.parsed.y.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#64748b',
+                            font: { family: 'Inter', size: 11 },
+                            maxRotation: 0,
+                            maxTicksLimit: 24,
+                        }
+                    },
+                    y: {
+                        position: 'right',
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: {
+                            color: '#64748b',
+                            font: { family: 'Inter', size: 11 },
+                            callback: function(value) {
+                                return '₪' + value.toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

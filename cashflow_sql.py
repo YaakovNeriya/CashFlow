@@ -32,6 +32,7 @@ def create_tables(conn):
                     
         cursor.execute('''CREATE TABLE IF NOT EXISTS settings (
                         id INT AUTO_INCREMENT PRIMARY KEY,
-                        initial_balance REAL NOT NULL DEFAULT 0.0
+                        initial_balance REAL NOT NULL DEFAULT 0.0,
+                        warning_threshold REAL NOT NULL DEFAULT 0.0
                     );''')
     conn.commit()
