@@ -23,4 +23,4 @@ def test_add_and_get_transaction():
 
     # שלב הניקיון: מחיקת הרשומה כדי לא ללכלך את מסד הנתונים
     if tx_id:
-        cashflow_db.delete_transaction(tx_id)
+        cashflow_db.delete_transaction(tx_id) 
