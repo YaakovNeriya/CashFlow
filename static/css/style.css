@@ -735,3 +735,69 @@ tr:hover td {
 .kpi-card:nth-child(2) { animation-delay: 0.1s; }
 .kpi-card:nth-child(3) { animation-delay: 0.15s; }
 .kpi-card:nth-child(4) { animation-delay: 0.2s; }
+
+/* ── Voice Recording FAB ────────────────────────────────────────── */
+.fab-voice {
+    position: fixed;
+    bottom: 2rem;
+    left: 2.5rem; /* Left side for RTL */
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: var(--transition);
+}
+
+.fab-voice .mic-icon {
+    font-size: 1.8rem;
+}
+
+.fab-voice:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+}
+
+.fab-voice.recording {
+    background: linear-gradient(135deg, var(--debit), #ec4899);
+    animation: pulse-record 1.5s infinite;
+}
+
+@keyframes pulse-record {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+.voice-status {
+    position: fixed;
+    bottom: 7rem;
+    left: 2.5rem;
+    background: var(--card-bg-solid);
+    color: var(--text-primary);
+    padding: 0.8rem 1.2rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-lg);
+    font-weight: 600;
+    z-index: 999;
+    transition: opacity 0.3s ease;
+}
+
+.voice-status.hidden {
+    opacity: 0;
+    pointer-events: none;
+}

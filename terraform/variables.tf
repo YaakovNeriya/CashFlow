@@ -68,3 +68,10 @@ variable "secret_key" {
   type        = string
   sensitive   = true
 }
+
+variable "gemini_api_key" {
+  description = "Gemini API Key for voice parsing"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

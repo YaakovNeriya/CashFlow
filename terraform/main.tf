@@ -148,6 +148,7 @@ resource "aws_instance" "app" {
     db_password  = var.db_password
     db_name      = var.db_name
     secret_key   = var.secret_key
+    gemini_api_key = var.gemini_api_key
   })
 
   tags = {

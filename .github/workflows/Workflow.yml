@@ -71,6 +71,7 @@ jobs:
         run: |
           cat <<'EOF' > terraform/terraform.tfvars
           ${{ secrets.TFVARS_FILE }}
+          gemini_api_key = "${{ secrets.GEMINI_API_KEY }}"
           EOF
 
       - name: Terraform Init

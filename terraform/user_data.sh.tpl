@@ -26,6 +26,7 @@ DB_USER=${db_user}
 DB_PASSWORD=${db_password}
 DB_NAME=${db_name}
 SECRET_KEY=${secret_key}
+GEMINI_API_KEY=${gemini_api_key}
 FLASK_DEBUG=false
 APP_IMAGE=${docker_image}
 EOF
