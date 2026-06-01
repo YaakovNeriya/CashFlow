@@ -144,6 +144,8 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Wait for EC2 initialization (user_data.sh) to finish
+            cloud-init status --wait
             cd /app
             sudo git config --global --add safe.directory /app
             sudo git pull
