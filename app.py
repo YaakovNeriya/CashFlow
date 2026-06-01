@@ -4,7 +4,6 @@ from datetime import date, datetime
 from services.analysis_service import generate_forecast_timeline, calculate_running_balance, calculate_monthly_summary, calculate_kpis, get_chart_data
 import os
 import json
-
 from prometheus_flask_exporter import PrometheusMetrics
 import google.generativeai as genai
 
