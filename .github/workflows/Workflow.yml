@@ -149,6 +149,12 @@ jobs:
             cd /app
             sudo git config --global --add safe.directory /app
             sudo git pull
+            # Update GEMINI_API_KEY in .env (so new keys take effect without rebuilding EC2)
+            if grep -q "^GEMINI_API_KEY=" .env 2>/dev/null; then
+              sudo sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" .env
+            else
+              echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" | sudo tee -a .env
+            fi
             # Create a 2GB swap file to prevent Out-Of-Memory (OOM) crashes
             if [ ! -f /swapfile ]; then
               sudo fallocate -l 2G /swapfile
