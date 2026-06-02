@@ -168,3 +168,10 @@ jobs:
             # Pull the new image and recreate containers
             sudo /usr/local/bin/docker-compose pull app
             sudo /usr/local/bin/docker-compose up -d --force-recreate --remove-orphans
+            # === DIAGNOSTICS: verify GEMINI_API_KEY ===
+            echo "--- .env file (masked) ---"
+            grep "GEMINI_API_KEY" .env | sed 's/\(.\{20\}\).*/\1...MASKED/'
+            echo "--- Container env (masked) ---"
+            sudo docker exec app-app-1 printenv GEMINI_API_KEY 2>/dev/null | sed 's/\(.\{20\}\).*/\1...MASKED/' || echo "GEMINI_API_KEY NOT FOUND in container!"
+            echo "--- Container is running? ---"
+            sudo docker ps --format "{{.Names}} {{.Status}}" | grep app
