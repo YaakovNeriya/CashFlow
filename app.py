@@ -139,7 +139,7 @@ def voice_transaction():
         if response_text.startswith("```"):
             response_text = response_text[3:]
         if response_text.endswith("```"):
-            response_text = response_text[:-3]
+            response_text = response_text[:-3] 
             
         transactions = json.loads(response_text)
         
