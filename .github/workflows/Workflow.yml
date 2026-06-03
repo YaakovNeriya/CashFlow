@@ -170,7 +170,7 @@ jobs:
             aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
             # Pull the new image and recreate containers
             sudo /usr/local/bin/docker-compose pull app
-            sudo /usr/local/bin/docker-compose up -d --force-recreate --remove-orphans
+            sudo /usr/local/bin/docker-compose up -d --force-recreate app
             # === DIAGNOSTICS: verify GROQ_API_KEY ===
             echo "--- .env file (masked) ---"
             grep "GROQ_API_KEY" .env | sed 's/\(.\{16\}\).*/\1...MASKED/'
