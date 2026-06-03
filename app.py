@@ -49,6 +49,7 @@ def operations():
         form_type = request.form.get('form_type')
         
         if form_type == 'transaction':
+            tx_id = request.form.get('tx_id')
             date_str = request.form.get('date')
             description = request.form.get('description')
             amount_str = request.form.get('amount')
@@ -57,12 +58,17 @@ def operations():
                     raise ValueError("יש להזין תאריך")
                 datetime.strptime(date_str, '%Y-%m-%d') # Validate format
                 amount_val = float(amount_str)
-                cashflow_db.add_transaction(date_str, description, amount_val)
-                flash('הפעולה נוספה בהצלחה!', 'success')
+                if tx_id:
+                    cashflow_db.update_transaction(tx_id, date_str, description, amount_val)
+                    flash('הפעולה עודכנה בהצלחה!', 'success')
+                else:
+                    cashflow_db.add_transaction(date_str, description, amount_val)
+                    flash('הפעולה נוספה בהצלחה!', 'success')
             except Exception as e:
                 flash(f'שגיאה בהוספת פעולה: {e}', 'error')
                 
         elif form_type == 'recurring':
+            rec_id = request.form.get('rec_id')
             description = request.form.get('description')
             amount_str = request.form.get('amount')
             day_of_month_str = request.form.get('day_of_month')
@@ -71,8 +77,12 @@ def operations():
                 day_val = int(day_of_month_str)
                 if not (1 <= day_val <= 31):
                     raise ValueError("יום חייב להיות בין 1 ל-31")
-                cashflow_db.add_recurring(day_val, description, amount_val)
-                flash('פעולה קבועה חודשית נוספה בהצלחה!', 'success')
+                if rec_id:
+                    cashflow_db.update_recurring(rec_id, day_val, description, amount_val)
+                    flash('פעולה קבועה חודשית עודכנה בהצלחה!', 'success')
+                else:
+                    cashflow_db.add_recurring(day_val, description, amount_val)
+                    flash('פעולה קבועה חודשית נוספה בהצלחה!', 'success')
             except Exception as e:
                 flash(f'שגיאה בהוספת פעולה קבועה: {e}', 'error')
                 

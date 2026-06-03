@@ -69,6 +69,13 @@ def delete_transaction(tx_id):
             cursor.execute("DELETE FROM transactions WHERE id = %s", (tx_id,))
         conn.commit()
 
+def update_transaction(tx_id, date_str, description, amount):
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE transactions SET date = %s, description = %s, amount = %s WHERE id = %s", 
+                           (date_str, description, amount, tx_id))
+        conn.commit()
+
 # -- RECURRING TRANSACTIONS --
 
 def get_all_recurring():
@@ -89,4 +96,11 @@ def delete_recurring(rec_id):
     with connect() as conn:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM recurring_transactions WHERE id = %s", (rec_id,))
+        conn.commit()
+
+def update_recurring(rec_id, day_of_month, description, amount):
+    with connect() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE recurring_transactions SET day_of_month = %s, description = %s, amount = %s WHERE id = %s", 
+                           (day_of_month, description, amount, rec_id))
         conn.commit()
