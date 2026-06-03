@@ -72,6 +72,7 @@ jobs:
           cat <<'EOF' > terraform/terraform.tfvars
           ${{ secrets.TFVARS_FILE }}
           gemini_api_key = "${{ secrets.GEMINI_API_KEY }}"
+          groq_api_key = "${{ secrets.GROQ_API_KEY }}"
           EOF
 
       - name: Terraform Init
@@ -149,11 +150,11 @@ jobs:
             cd /app
             sudo git config --global --add safe.directory /app
             sudo git pull
-            # Update GEMINI_API_KEY in .env (so new keys take effect without rebuilding EC2)
-            if grep -q "^GEMINI_API_KEY=" .env 2>/dev/null; then
-              sudo sed -i "s|^GEMINI_API_KEY=.*|GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}|" .env
+            # Update GROQ_API_KEY in .env (so new keys take effect without rebuilding EC2)
+            if grep -q "^GROQ_API_KEY=" .env 2>/dev/null; then
+              sudo sed -i "s|^GROQ_API_KEY=.*|GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}|" .env
             else
-              echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" | sudo tee -a .env
+              echo "GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}" | sudo tee -a .env
             fi
             # Create a 2GB swap file to prevent Out-Of-Memory (OOM) crashes
             if [ ! -f /swapfile ]; then
@@ -168,10 +169,10 @@ jobs:
             # Pull the new image and recreate containers
             sudo /usr/local/bin/docker-compose pull app
             sudo /usr/local/bin/docker-compose up -d --force-recreate --remove-orphans
-            # === DIAGNOSTICS: verify GEMINI_API_KEY ===
+            # === DIAGNOSTICS: verify GROQ_API_KEY ===
             echo "--- .env file (masked) ---"
-            grep "GEMINI_API_KEY" .env | sed 's/\(.\{20\}\).*/\1...MASKED/'
+            grep "GROQ_API_KEY" .env | sed 's/\(.\{16\}\).*/\1...MASKED/'
             echo "--- Container env (masked) ---"
-            sudo docker exec app-app-1 printenv GEMINI_API_KEY 2>/dev/null | sed 's/\(.\{20\}\).*/\1...MASKED/' || echo "GEMINI_API_KEY NOT FOUND in container!"
+            sudo docker exec app-app-1 printenv GROQ_API_KEY 2>/dev/null | sed 's/\(.\{16\}\).*/\1...MASKED/' || echo "GROQ_API_KEY NOT FOUND in container!"
             echo "--- Container is running? ---"
             sudo docker ps --format "{{.Names}} {{.Status}}" | grep app

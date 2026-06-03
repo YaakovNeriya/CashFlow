@@ -69,8 +69,8 @@ variable "secret_key" {
   sensitive   = true
 }
 
-variable "gemini_api_key" {
-  description = "Gemini API Key for voice parsing"
+variable "groq_api_key" {
+  description = "Groq API Key for voice transaction parsing"
   type        = string
   sensitive   = true
   default     = ""

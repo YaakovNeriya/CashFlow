@@ -5,15 +5,14 @@ from services.analysis_service import generate_forecast_timeline, calculate_runn
 import os
 import json
 from prometheus_flask_exporter import PrometheusMetrics
-import google.generativeai as genai
+from groq import Groq
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-fallback-key')
 metrics = PrometheusMetrics(app)
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+groq_client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # Initialize the db on startup
 with app.app_context():
@@ -97,52 +96,51 @@ def delete_recurring(id):
 
 @app.route('/api/voice_transaction', methods=['POST'])
 def voice_transaction():
-    if not GEMINI_API_KEY:
-        return jsonify({"error": "Gemini API key is missing. Please configure it in the server."}), 500
-        
+    if not groq_client:
+        return jsonify({"error": "Groq API key is missing. Please configure GROQ_API_KEY in the server."}), 500
+
     data = request.get_json()
     text = data.get('text', '')
-    
+
     if not text:
         return jsonify({"error": "No text provided"}), 400
-        
+
     today_str = date.today().strftime('%Y-%m-%d')
-    prompt = f"""
-    You are a financial transaction extractor.
-    Extract all distinct financial transactions from the user's input in Hebrew.
-    Today's date is: {today_str}
-    
-    Rules:
-    1. Return ONLY a valid JSON array of objects. Do not include markdown formatting like ```json or backticks. Just the raw array.
-    2. If an amount is an expense or purchase (like buying coffee, groceries, paying bills), make it a negative number. 
-    3. If an amount is an income or deposit (like salary, getting paid), make it a positive number.
-    4. Provide a short description in Hebrew based on the text.
-    5. Ensure the date is in YYYY-MM-DD format. If no date is specified, use today's date ({today_str}).
-    
-    Format example:
-    [
-      {{"date": "2023-10-25", "description": "קפה", "amount": -20.0}},
-      {{"date": "2023-10-25", "description": "משכורת", "amount": 5000.0}}
-    ]
-    
-    User Input: {text}
-    """
-    
+    prompt = f"""You are a financial transaction extractor.
+Extract all distinct financial transactions from the user's input in Hebrew.
+Today's date is: {today_str}
+
+Rules:
+1. Return ONLY a valid JSON array of objects. No markdown, no backticks, just the raw JSON array.
+2. Expenses/purchases → negative amount. Income/deposits → positive amount.
+3. Provide a short description in Hebrew.
+4. Date format: YYYY-MM-DD. Default to today ({today_str}) if unspecified.
+
+Example output:
+[{{"date": "2023-10-25", "description": "קפה", "amount": -20.0}}, {{"date": "2023-10-25", "description": "משכורת", "amount": 5000.0}}]
+
+User Input: {text}"""
+
     try:
-        model = genai.GenerativeModel('gemini-2.0-flash-lite')
-        response = model.generate_content(prompt)
-        response_text = response.text.strip()
-        
-        # Clean up possible markdown
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=1024,
+        )
+        response_text = response.choices[0].message.content.strip()
+
+        # Clean up possible markdown fences
         if response_text.startswith("```json"):
             response_text = response_text[7:]
         if response_text.startswith("```"):
             response_text = response_text[3:]
         if response_text.endswith("```"):
-            response_text = response_text[:-3] 
-            
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+
         transactions = json.loads(response_text)
-        
+
         added_count = 0
         for tx in transactions:
             date_str = tx.get('date', today_str)
@@ -150,9 +148,9 @@ def voice_transaction():
             amount = float(tx.get('amount', 0.0))
             cashflow_db.add_transaction(date_str, description, amount)
             added_count += 1
-            
+
         return jsonify({"success": True, "added": added_count, "transactions": transactions})
-        
+
     except Exception as e:
         print(f"Error parsing voice transaction: {e}")
         return jsonify({"error": str(e)}), 500
