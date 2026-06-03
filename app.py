@@ -123,11 +123,15 @@ Today's date is: {today_str} (יום {day_name_he})
 Rules:
 1. Return ONLY a valid JSON array of objects. No markdown, no backticks, just the raw JSON array.
 2. Expenses/purchases → negative amount. Income/deposits → positive amount.
-3. Provide a short, clean noun-based description in Hebrew (e.g. "משכורת", "קפה", "סופר", "החזר"). Do NOT include the amount, and do NOT include verbs like "אקבל", "קניתי", "הוצאתי".
-4. Date format: YYYY-MM-DD. Calculate relative dates accurately based on today's date and day of week. For example, if today is Wednesday and user says "ביום ראשון", it means the upcoming Sunday. If they say "אתמול", it's yesterday. Default to today ({today_str}) if unspecified.
+3. Provide a short, clean noun-based description in Hebrew. Do NOT include the amount, and do NOT include verbs like "אקבל", "קניתי", "הוצאתי".
+4. For one-time transactions, provide "date" in YYYY-MM-DD format (calculate relative dates based on today).
+5. If the user indicates this is a recurring/monthly transaction (פעולה קבועה / הוראת קבע / כל חודש), set "is_recurring" to true, and extract the "day_of_month" (1-31) it occurs on. If day is not specified, use {today.day}.
 
 Example output:
-[{{"date": "2023-10-25", "description": "קפה", "amount": -20.0}}, {{"date": "2023-10-25", "description": "משכורת", "amount": 5000.0}}]
+[
+  {{"date": "2023-10-25", "description": "קניית קפה", "amount": -20.0, "is_recurring": false}},
+  {{"description": "ביטוח", "amount": -150.0, "is_recurring": true, "day_of_month": 10}}
+]
 
 User Input: {text}"""
 
@@ -153,10 +157,23 @@ User Input: {text}"""
 
         added_count = 0
         for tx in transactions:
-            date_str = tx.get('date', today_str)
             description = tx.get('description', 'פעולה קולית')
             amount = float(tx.get('amount', 0.0))
-            cashflow_db.add_transaction(date_str, description, amount)
+            is_recurring = tx.get('is_recurring', False)
+            
+            if is_recurring:
+                day_val = tx.get('day_of_month', today.day)
+                try:
+                    day_val = int(day_val)
+                    if not (1 <= day_val <= 31):
+                        day_val = today.day
+                except:
+                    day_val = today.day
+                cashflow_db.add_recurring(day_val, description, amount)
+            else:
+                date_str = tx.get('date', today_str)
+                cashflow_db.add_transaction(date_str, description, amount)
+                
             added_count += 1
 
         return jsonify({"success": True, "added": added_count, "transactions": transactions})
