@@ -105,16 +105,26 @@ def voice_transaction():
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    today_str = date.today().strftime('%Y-%m-%d')
-    prompt = f"""You are a financial transaction extractor.
+    today = date.today()
+    today_str = today.strftime('%Y-%m-%d')
+    day_name_en = today.strftime('%A')
+    
+    # Map English day to Hebrew for better LLM context
+    hebrew_days = {
+        'Sunday': 'ראשון', 'Monday': 'שני', 'Tuesday': 'שלישי',
+        'Wednesday': 'רביעי', 'Thursday': 'חמישי', 'Friday': 'שישי', 'Saturday': 'שבת'
+    }
+    day_name_he = hebrew_days.get(day_name_en, '')
+
+    prompt = f"""You are an expert financial transaction extractor for an Israeli app.
 Extract all distinct financial transactions from the user's input in Hebrew.
-Today's date is: {today_str}
+Today's date is: {today_str} (יום {day_name_he})
 
 Rules:
 1. Return ONLY a valid JSON array of objects. No markdown, no backticks, just the raw JSON array.
 2. Expenses/purchases → negative amount. Income/deposits → positive amount.
-3. Provide a short description in Hebrew.
-4. Date format: YYYY-MM-DD. Default to today ({today_str}) if unspecified.
+3. Provide a short, clean noun-based description in Hebrew (e.g. "משכורת", "קפה", "סופר", "החזר"). Do NOT include the amount, and do NOT include verbs like "אקבל", "קניתי", "הוצאתי".
+4. Date format: YYYY-MM-DD. Calculate relative dates accurately based on today's date and day of week. For example, if today is Wednesday and user says "ביום ראשון", it means the upcoming Sunday. If they say "אתמול", it's yesterday. Default to today ({today_str}) if unspecified.
 
 Example output:
 [{{"date": "2023-10-25", "description": "קפה", "amount": -20.0}}, {{"date": "2023-10-25", "description": "משכורת", "amount": 5000.0}}]
