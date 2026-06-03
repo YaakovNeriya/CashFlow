@@ -118,14 +118,18 @@ def voice_transaction():
 
     prompt = f"""You are an expert financial transaction extractor for an Israeli app.
 Extract all distinct financial transactions from the user's input in Hebrew.
-Today's date is: {today_str} (יום {day_name_he})
+Today's date is: {today_str} (יום {day_name_he}), and today's day of the month is {today.day}.
 
 Rules:
 1. Return ONLY a valid JSON array of objects. No markdown, no backticks, just the raw JSON array.
 2. Expenses/purchases → negative amount. Income/deposits → positive amount.
-3. Provide a short, clean noun-based description in Hebrew. Do NOT include the amount, and do NOT include verbs like "אקבל", "קניתי", "הוצאתי".
+3. Provide a short, clean noun-based description in Hebrew. Do NOT include the amount, .
 4. For one-time transactions, provide "date" in YYYY-MM-DD format (calculate relative dates based on today).
-5. If the user indicates this is a recurring/monthly transaction (פעולה קבועה / הוראת קבע / כל חודש), set "is_recurring" to true, and extract the "day_of_month" (1-31) it occurs on. If day is not specified, use {today.day}.
+5. For recurring/monthly transactions (פעולה קבועה / הוראת קבע / כל חודש):
+   - Set "is_recurring" to true.
+   - Extract or calculate the "day_of_month" (1-31).
+   - CRITICAL: If the input uses relative time like "ממחר" (tomorrow) or "עוד יומיים", you MUST calculate the correct day of the month mathematically relative to today ({today.day}).
+   - Only if no day or relative timeframe is specified at all, use {today.day}.
 
 Example output:
 [
