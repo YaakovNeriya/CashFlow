@@ -138,6 +138,8 @@ jobs:
           host: ${{ steps.ec2-info.outputs.ip }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 30s
+          command_timeout: 5m
           script: |
             set -e
             echo "Waiting for cloud-init to finish (this may take 2-3 minutes)..."
