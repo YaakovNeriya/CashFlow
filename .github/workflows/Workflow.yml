@@ -69,17 +69,17 @@ jobs:
 
       - name: Create tfvars file
         run: |
-          cat <<'EOF' > terraform/terraform.tfvars
+          cat <<'EOF' > infra/terraform/terraform.tfvars
           ${{ secrets.TFVARS_FILE }}
           groq_api_key = "${{ secrets.GROQ_API_KEY }}"
           EOF
 
       - name: Terraform Init
-        working-directory: ./terraform
+        working-directory: ./infra/terraform
         run: terraform init
 
       - name: Import existing resources
-        working-directory: ./terraform
+        working-directory: ./infra/terraform
         continue-on-error: true
         run: |
           terraform import aws_ecr_repository.app cashflow-app 2>/dev/null || true
@@ -91,7 +91,7 @@ jobs:
           terraform import aws_iam_instance_profile.ec2_profile cashflow-app-instance-profile 2>/dev/null || true
 
       - name: Terraform Apply (ECR Target)
-        working-directory: ./terraform
+        working-directory: ./infra/terraform
         run: terraform apply -target=aws_ecr_repository.app -auto-approve
 
       - name: Login to Amazon ECR
@@ -119,12 +119,12 @@ jobs:
           docker push $ECR_URI:latest
 
       - name: Terraform Apply (All Resources)
-        working-directory: ./terraform
+        working-directory: ./infra/terraform
         run: terraform apply -auto-approve
 
       - name: Get EC2 Info
         id: ec2-info
-        working-directory: ./terraform
+        working-directory: ./infra/terraform
         run: |
           IP=$(terraform output -raw public_ip)
           ID=$(terraform output -raw instance_id)

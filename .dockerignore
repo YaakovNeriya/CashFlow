@@ -4,6 +4,6 @@ __pycache__/
 *.pyc
 .git/
 cashflow.db
-terraform/
+infra/
 tests/
 .github/

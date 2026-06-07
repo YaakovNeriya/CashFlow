@@ -1,106 +1,11 @@
-from cashflow_sql import connect, create_tables
-import time
-
-def init_db():
-    # Wait for MySQL to be ready
-    for i in range(5):
-        try:
-            with connect() as conn:
-                create_tables(conn)
-                with conn.cursor() as cursor:
-                    # Migrate: add warning_threshold if it doesn't exist
-                    cursor.execute("""
-                        SELECT COUNT(*) as cnt FROM information_schema.columns
-                        WHERE table_schema = DATABASE()
-                        AND table_name = 'settings'
-                        AND column_name = 'warning_threshold'
-                    """)
-                    if cursor.fetchone()['cnt'] == 0:
-                        cursor.execute("ALTER TABLE settings ADD COLUMN warning_threshold REAL NOT NULL DEFAULT 0.0")
-
-                    cursor.execute("SELECT id FROM settings LIMIT 1")
-                    row = cursor.fetchone()
-                    if not row:
-                        cursor.execute("INSERT INTO settings (initial_balance, warning_threshold) VALUES (0.0, 0.0)")
-                conn.commit()
-            print("Database connected successfully!")
-            return
-        except Exception as e:
-            print(f"Waiting for database... attempt {i+1}/5")
-            time.sleep(3)
-    print("ERROR: Could not connect to database after 5 attempts!")
-
-
-def get_settings():
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT initial_balance, warning_threshold FROM settings LIMIT 1")
-            row = cursor.fetchone()
-            return dict(row) if row else {'initial_balance': 0.0, 'warning_threshold': 0.0}
-
-def update_settings(initial_balance, warning_threshold):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE settings SET initial_balance = %s, warning_threshold = %s", (initial_balance, warning_threshold))
-        conn.commit()
-
-def dict_val(row):
-    return dict(row)
-
-# -- TRANSACTIONS --
-
-def get_all_transactions():
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id, date, description, amount FROM transactions ORDER BY date ASC")
-            rows = cursor.fetchall()
-            return [dict_val(r) for r in rows]
-
-def add_transaction(date_str, description, amount):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO transactions (date, description, amount) VALUES (%s, %s, %s)", 
-                           (date_str, description, amount))
-        conn.commit()
-
-def delete_transaction(tx_id):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM transactions WHERE id = %s", (tx_id,))
-        conn.commit()
-
-def update_transaction(tx_id, date_str, description, amount):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE transactions SET date = %s, description = %s, amount = %s WHERE id = %s", 
-                           (date_str, description, amount, tx_id))
-        conn.commit()
-
-# -- RECURRING TRANSACTIONS --
-
-def get_all_recurring():
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id, day_of_month, description, amount FROM recurring_transactions ORDER BY day_of_month ASC")
-            rows = cursor.fetchall()
-            return [dict_val(r) for r in rows]
-
-def add_recurring(day_of_month, description, amount):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("INSERT INTO recurring_transactions (day_of_month, description, amount) VALUES (%s, %s, %s)", 
-                           (day_of_month, description, amount))
-        conn.commit()
-
-def delete_recurring(rec_id):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("DELETE FROM recurring_transactions WHERE id = %s", (rec_id,))
-        conn.commit()
-
-def update_recurring(rec_id, day_of_month, description, amount):
-    with connect() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute("UPDATE recurring_transactions SET day_of_month = %s, description = %s, amount = %s WHERE id = %s", 
-                           (day_of_month, description, amount, rec_id))
-        conn.commit()
+# Backward-compatibility wrapper — all logic moved to app/db/
+# This file re-exports everything so existing imports (e.g. in tests) still work.
+from app.db.settings import init_db, get_settings, update_settings
+from app.db.transactions import (
+    get_all_transactions, add_transaction,
+    delete_transaction, update_transaction
+)
+from app.db.recurring import (
+    get_all_recurring, add_recurring,
+    delete_recurring, update_recurring
+)
