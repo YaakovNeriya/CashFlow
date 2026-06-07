@@ -1,12 +1,11 @@
 import pytest
 from datetime import date
-from services.analysis_service import (
+from app.services.forecast_service import (
     calculate_running_balance,
     calculate_monthly_summary,
-    generate_forecast_timeline,
-    calculate_kpis,
-    get_chart_data
+    generate_forecast_timeline
 )
+from app.services.kpi_service import calculate_kpis, get_chart_data
 
 
 # ─────────────────────────────────────────────

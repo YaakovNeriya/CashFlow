@@ -1,13 +1,13 @@
 import pytest
-import cashflow_db
+from app.db import add_transaction, get_all_transactions, delete_transaction
 
 def test_add_and_get_transaction():
     # שלב ההכנה: הוספת רשומה זמנית למסד הנתונים
     test_desc = "TEST_TRANSACTION_CI_CD"
-    cashflow_db.add_transaction("2026-05-24", test_desc, 999.0)
+    add_transaction("2026-05-24", test_desc, 999.0)
 
     # שלב הפעולה: שליפת כל הרשומות
-    transactions = cashflow_db.get_all_transactions()
+    transactions = get_all_transactions()
 
     # שלב האימות: בדיקה שהרשומה שלנו קיימת
     found = False
@@ -23,4 +23,4 @@ def test_add_and_get_transaction():
 
     # שלב הניקיון: מחיקת הרשומה כדי לא ללכלך את מסד הנתונים
     if tx_id:
-        cashflow_db.delete_transaction(tx_id) 
+        delete_transaction(tx_id) 
