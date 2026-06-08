@@ -124,3 +124,15 @@ python -m pytest tests/ -v
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+## 🚨 Troubleshooting
+
+### "Mixed Content" Warnings in Browser
+
+If you are accessing the application via `https://localhost` (e.g., due to a self-signed certificate) and see "Mixed Content" warnings preventing camera access for the Voice feature, you need to enable the "Insecure Content" flag in Chrome:
+1. Open Chrome.
+2. Navigate to: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+3. Set the flag to **Enabled**.
+4. Restart the browser.
