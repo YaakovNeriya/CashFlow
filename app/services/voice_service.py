@@ -29,7 +29,7 @@ Rules:
 4. For one-time transactions, provide "date" in YYYY-MM-DD format (calculate relative dates based on today).
 5. For recurring/monthly transactions (פעולה קבועה / הוראת קבע / כל חודש):
    - Set "is_recurring" to true.
-   - Extract or calculate the "day_of_month" (1-31).
+   - Extract or calculate the "day_of_month" (1-31). Pay special attention to Hebrew ordinal numbers for days of the month (e.g., "ראשון לחודש" = 1, "שני לחודש" = 2, "חמישי לחודש" = 5, "עשירי לחודש" = 10).
    - CRITICAL: If the input uses relative time like "ממחר" (tomorrow) or "עוד יומיים", you MUST calculate the correct day of the month mathematically relative to today ({today.day}).
    - Only if no day or relative timeframe is specified at all, use {today.day}.
 
