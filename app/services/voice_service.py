@@ -52,7 +52,7 @@ def clean_llm_response(response_text):
         response_text = response_text[3:]
     if response_text.endswith("```"):
         response_text = response_text[:-3]
-    return response_text.strip()
+    return response_text.strip() 
 
 
 def parse_voice_text(groq_client, text):
