@@ -41,7 +41,7 @@ Example output:
 
 User Input: {text}"""
     
-    return prompt
+    return prompt 
 
 
 def clean_llm_response(response_text):
